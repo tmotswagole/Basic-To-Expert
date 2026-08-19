@@ -1,6 +1,7 @@
 # Project: Python Personal Finance Tracker CLI
 
-You are building a command-line application that lets a user manage income, expenses, budgets, and transactions.
+You are building a command-line application that lets a user manage income,
+expenses, budgets, and transactions.
 
 Example:
 
@@ -50,31 +51,31 @@ entertainment P1,200
 
 You'll naturally use:
 
-* `list`
-* `dict`
-* `set`
-* `tuple`
-* mutable vs immutable objects
-* `is` vs `==`
-* functions
-* `*args`
-* `**kwargs`
-* classes
-* objects
-* inheritance
-* composition
-* exceptions
-* custom exceptions
-* `try`
-* `except`
-* `else`
-* `finally`
+- `list`
+- `dict`
+- `set`
+- `tuple`
+- mutable vs immutable objects
+- `is` vs `==`
+- functions
+- `*args`
+- `**kwargs`
+- classes
+- objects
+- inheritance
+- composition
+- exceptions
+- custom exceptions
+- `try`
+- `except`
+- `else`
+- `finally`
 
 And because it's Python-only, you can focus entirely on the language.
 
 ---
 
-# Stage 1 — Transactions
+## Stage 1 — Transactions
 
 Start with a simple list:
 
@@ -115,7 +116,7 @@ Don't worry about classes yet.
 
 ---
 
-# Stage 2 — Lists and dictionaries
+## Stage 2 — Lists and dictionaries
 
 Implement:
 
@@ -146,7 +147,7 @@ This is where you should get comfortable with mutation.
 
 ---
 
-# Stage 3 — Sets
+## Stage 3 — Sets
 
 Categories shouldn't be duplicated.
 
@@ -187,7 +188,7 @@ and understand why sets are useful.
 
 ---
 
-# Stage 4 — Tuples
+## Stage 4 — Tuples
 
 Represent transaction types as an immutable collection:
 
@@ -227,7 +228,7 @@ That's part of the learning.
 
 ---
 
-# Stage 5 — `is` vs `==`
+## Stage 5 — `is` vs `==`
 
 Create functions that return `None` when something isn't found.
 
@@ -270,7 +271,7 @@ a is c
 
 ---
 
-# Stage 6 — The mutable default argument trap
+## Stage 6 — The mutable default argument trap
 
 Create this deliberately:
 
@@ -301,7 +302,7 @@ Understand **why** the original happens.
 
 ---
 
-# Stage 7 — Functions with `*args`
+## Stage 7 — Functions with `*args`
 
 Add a transaction filtering system.
 
@@ -350,7 +351,7 @@ Remember that `values` becomes a tuple.
 
 ---
 
-# Stage 8 — `**kwargs`
+## Stage 8 — `**kwargs`
 
 Build a more flexible search function:
 
@@ -384,7 +385,7 @@ This is a very practical use of `**kwargs`.
 
 ---
 
-# Stage 9 — Classes
+## Stage 9 — Classes
 
 Once the procedural version works, rebuild it using classes.
 
@@ -426,7 +427,7 @@ FinanceTracker
 
 ---
 
-# Stage 10 — Composition
+## Stage 10 — Composition
 
 Give `FinanceTracker` several components.
 
@@ -466,7 +467,7 @@ Your tracker **has** managers.
 
 ---
 
-# Stage 11 — Inheritance
+## Stage 11 — Inheritance
 
 Don't force inheritance into the whole project.
 
@@ -515,11 +516,12 @@ returns:
 -250
 ```
 
-Now you can see actual polymorphism rather than inheritance existing just because you need to demonstrate it.
+Now you can see actual polymorphism rather than inheritance existing just
+because you need to demonstrate it.
 
 ---
 
-# Stage 12 — Exceptions
+## Stage 12 — Exceptions
 
 Create custom exceptions:
 
@@ -557,7 +559,7 @@ if amount <= 0:
 
 ---
 
-# Stage 13 — `try / except / else / finally`
+## Stage 13 — `try / except / else / finally`
 
 Your CLI should handle errors properly.
 
@@ -592,7 +594,7 @@ This directly practices the exception structure from your study notes.
 
 ---
 
-# Stage 14 — Budget system
+## Stage 14 — Budget system
 
 Add budgets:
 
@@ -625,7 +627,7 @@ This gives you more opportunities to practice exceptions.
 
 ---
 
-# Stage 15 — Reports
+## Stage 15 — Reports
 
 Add:
 
@@ -673,7 +675,7 @@ Use dictionaries to calculate totals:
 
 ---
 
-# Final project structure
+## Final project structure
 
 Only once the project becomes large should you split it up:
 
@@ -717,7 +719,7 @@ Just Python.
 
 ---
 
-# The progression I want you to follow
+## The progression I want you to follow
 
 Don't build the final version immediately.
 
@@ -768,4 +770,5 @@ Build it through these stages:
               └─────────────────┘
 ```
 
-The key rule: **don't move to the next stage until you can explain why the Python feature you're using is appropriate.**
+The key rule: **don't move to the next stage until you can explain why the
+Python feature you're using is appropriate.**

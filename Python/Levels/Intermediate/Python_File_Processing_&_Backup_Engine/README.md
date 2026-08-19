@@ -1,24 +1,27 @@
 # Project: Python File Processing & Backup Engine
 
-Build a command-line **file processing engine** that can scan directories, process large files lazily, create backups, compare file snapshots, and safely manage operations.
+Build a command-line **file processing engine** that can scan directories,
+process large files lazily, create backups, compare file snapshots, and safely
+manage operations.
 
 You will use **only Python's standard library**.
 
 No:
 
-* FastAPI
-* databases
-* Redis
-* APIs
-* third-party packages
-* web frameworks
-* LLMs
+- FastAPI
+- databases
+- Redis
+- APIs
+- third-party packages
+- web frameworks
+- LLMs
 
-The project should force you to use the intermediate Python features you're studying.
+The project should force you to use the intermediate Python features you're
+studying.
 
 ---
 
-# What the finished program does
+## What the finished program does
 
 You should eventually be able to run:
 
@@ -106,7 +109,7 @@ This is a small but realistic systems-style Python project.
 
 ---
 
-# 1. Object model
+## 1. Object model
 
 Create a `FileInfo` object.
 
@@ -138,15 +141,15 @@ hash(file)
 
 This gives you direct practice with:
 
-* `__repr__`
-* `__str__`
-* `__len__`
-* `__eq__`
-* `__hash__`
+- `__repr__`
+- `__str__`
+- `__len__`
+- `__eq__`
+- `__hash__`
 
 ---
 
-# 2. `__repr__`
+## 2. `__repr__`
 
 Make `repr()` useful to developers.
 
@@ -162,7 +165,8 @@ Ideally:
 repr(file)
 ```
 
-should contain enough information to understand exactly what object you're looking at.
+should contain enough information to understand exactly what object you're
+looking at.
 
 Then test:
 
@@ -175,7 +179,7 @@ and make them intentionally different.
 
 ---
 
-# 3. `__str__`
+## 3. `__str__`
 
 Make `str()` user-friendly.
 
@@ -213,7 +217,7 @@ That's the exact distinction your notes describe.
 
 ---
 
-# 4. `__len__`
+## 4. `__len__`
 
 Give `FileInfo` a meaningful length.
 
@@ -236,7 +240,7 @@ can demonstrate how `__len__` can influence truthiness.
 
 ---
 
-# 5. `__eq__`
+## 5. `__eq__`
 
 Two `FileInfo` objects representing the same file should compare correctly.
 
@@ -271,7 +275,7 @@ This gives you a practical way to reinforce **identity vs equality**.
 
 ---
 
-# 6. `__hash__`
+## 6. `__hash__`
 
 Make `FileInfo` usable inside a set:
 
@@ -294,13 +298,14 @@ file_sizes = {
 
 But this is where you need to think carefully.
 
-If the object's equality depends on mutable attributes, your hash strategy can become dangerous.
+If the object's equality depends on mutable attributes, your hash strategy can
+become dangerous.
 
 That's part of the exercise.
 
 ---
 
-# 7. Shallow vs deep copy
+## 7. Shallow vs deep copy
 
 Create a `DirectorySnapshot`.
 
@@ -360,7 +365,7 @@ Your goal is to understand **exactly what is being copied**.
 
 ---
 
-# 8. Build a snapshot system
+## 8. Build a snapshot system
 
 Your application should be able to capture:
 
@@ -399,7 +404,7 @@ snapshots/
 
 ---
 
-# 9. Decorators
+## 9. Decorators
 
 Now add an operation logger.
 
@@ -440,7 +445,7 @@ This directly mirrors the material you're studying.
 
 ---
 
-# 10. Create several decorators
+## 10. Create several decorators
 
 Don't stop at `@timed`.
 
@@ -481,7 +486,7 @@ Now you have a reason to understand **decorator stacking**.
 
 ---
 
-# 11. Test `functools.wraps`
+## 11. Test `functools.wraps`
 
 Create a decorated function:
 
@@ -515,7 +520,7 @@ This makes the reason for `functools.wraps` obvious.
 
 ---
 
-# 12. Generators
+## 12. Generators
 
 This is where the project gets interesting.
 
@@ -546,7 +551,7 @@ for line in stream_lines("large_file.txt"):
 
 ---
 
-# 13. Build a large-file analyzer
+## 13. Build a large-file analyzer
 
 Your program should support:
 
@@ -602,7 +607,7 @@ load everything into RAM
 
 ---
 
-# 14. Generator pipelines
+## 14. Generator pipelines
 
 Take it further.
 
@@ -647,7 +652,7 @@ Nothing should happen until iteration begins.
 
 ---
 
-# 15. Generator challenge
+## 15. Generator challenge
 
 Create a function:
 
@@ -680,7 +685,7 @@ This is a very practical use of generators.
 
 ---
 
-# 16. Context managers
+## 16. Context managers
 
 Now build a custom context manager.
 
@@ -716,7 +721,7 @@ __exit__
 
 ---
 
-# 17. Build a backup context manager
+## 17. Build a backup context manager
 
 Create:
 
@@ -760,7 +765,7 @@ __exit__()
 
 ---
 
-# 18. Context manager with `contextlib`
+## 18. Context manager with `contextlib`
 
 After you've implemented the class version, implement the same thing using:
 
@@ -790,7 +795,7 @@ You should understand both.
 
 ---
 
-# 19. Snapshot comparison
+## 19. Snapshot comparison
 
 Now make the project actually useful.
 
@@ -833,16 +838,16 @@ UNCHANGED
 
 This requires:
 
-* dictionaries
-* sets
-* object equality
-* hashing
-* iteration
-* generators
+- dictionaries
+- sets
+- object equality
+- hashing
+- iteration
+- generators
 
 ---
 
-# 20. Final architecture
+## 20. Final architecture
 
 Once you're finished, your Python project could look like:
 
@@ -885,7 +890,7 @@ Still **nothing but Python**.
 
 ---
 
-# What each topic maps to
+## What each topic maps to
 
 | Your topic        | Project feature                                         |
 | ----------------- | ------------------------------------------------------- |
@@ -926,13 +931,15 @@ Build:
 
 and use them to understand why `__new__` exists.
 
-That's much better than artificially putting `__new__` into your file processor just to say you've used it.
+That's much better than artificially putting `__new__` into your file processor
+just to say you've used it.
 
 ---
 
-# Your final challenge
+## Your final challenge
 
-When you've completed everything, your program should be able to handle something like:
+When you've completed everything, your program should be able to handle
+something like:
 
 ```text
 $ python main.py
@@ -987,6 +994,10 @@ STREAM     0.17s
 > exit
 ```
 
-And the important thing is that **you built the machinery yourself using Python's standard library**.
+And the important thing is that **you built the machinery yourself using
+Python's standard library**.
 
-This project is a much better fit for the intermediate material than another CRUD-style application because every feature gives you a concrete reason to learn Python's object model, decorators, generators, copying semantics, and context managers.
+This project is a much better fit for the intermediate material than another
+CRUD-style application because every feature gives you a concrete reason to
+learn Python's object model, decorators, generators, copying semantics, and
+context managers.

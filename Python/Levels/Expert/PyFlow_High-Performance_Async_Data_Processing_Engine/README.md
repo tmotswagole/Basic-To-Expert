@@ -1,22 +1,26 @@
 # Project: PyFlow — High-Performance Async Data Processing Engine
 
-Build a **Python-only, high-throughput document ingestion and processing engine**.
+Build a **Python-only, high-throughput document ingestion and processing
+engine**.
 
-It takes a directory containing potentially millions of files, streams them through an asynchronous pipeline, processes CPU-heavy work in separate processes, maintains an in-memory cache, generates snapshots, tracks metrics, and exposes a small CLI for controlling the engine.
+It takes a directory containing potentially millions of files, streams them
+through an asynchronous pipeline, processes CPU-heavy work in separate
+processes, maintains an in-memory cache, generates snapshots, tracks metrics,
+and exposes a small CLI for controlling the engine.
 
 No:
 
-* FastAPI
-* Django
-* Flask
-* Redis
-* PostgreSQL
-* external APIs
-* third-party packages
-* Celery
-* NumPy
-* Pandas
-* LLMs
+- FastAPI
+- Django
+- Flask
+- Redis
+- PostgreSQL
+- external APIs
+- third-party packages
+- Celery
+- NumPy
+- Pandas
+- LLMs
 
 **Python standard library only.**
 
@@ -24,7 +28,7 @@ The point is to make the Python runtime itself the thing you're demonstrating.
 
 ---
 
-# 1. What you're building
+## 1. What you're building
 
 The finished system looks conceptually like this:
 
@@ -63,11 +67,12 @@ The finished system looks conceptually like this:
                 Snapshot       Metrics      Reports
 ```
 
-This is essentially a small **data-engineering/runtime framework written from scratch in Python**.
+This is essentially a small **data-engineering/runtime framework written from
+scratch in Python**.
 
 ---
 
-# 2. The problem
+## 2. The problem
 
 Imagine you have:
 
@@ -103,7 +108,7 @@ And it needs to remain responsive while doing all of this.
 
 ---
 
-# 3. The architecture
+## 3. The architecture
 
 Your eventual project should look roughly like:
 
@@ -172,7 +177,7 @@ Build it progressively.
 
 ---
 
-# 4. Phase 1 — Build the object model
+## 4. Phase 1 — Build the object model
 
 Create a `FileRecord`.
 
@@ -235,7 +240,7 @@ could represent the number of lines.
 
 ---
 
-# 5. Make `FileRecord` memory efficient
+## 5. Make `FileRecord` memory efficient
 
 This is where the expert material begins.
 
@@ -255,10 +260,10 @@ SlimFileRecord
 
 Measure:
 
-* object size
-* attribute access
-* memory usage
-* ability to dynamically add attributes
+- object size
+- attribute access
+- memory usage
+- ability to dynamically add attributes
 
 Use:
 
@@ -291,7 +296,7 @@ Now you have a practical reason to understand `__slots__`.
 
 ---
 
-# 6. Explore `__new__`
+## 6. Explore `__new__`
 
 Don't artificially use `__new__` everywhere.
 
@@ -322,11 +327,12 @@ a is b
 
 You can investigate when identity can be deliberately controlled.
 
-This demonstrates that you understand **why `__new__` exists**, rather than simply knowing that it exists.
+This demonstrates that you understand **why `__new__` exists**, rather than
+simply knowing that it exists.
 
 ---
 
-# 7. File discovery must be lazy
+## 7. File discovery must be lazy
 
 Your scanner should **never** build a list of millions of files.
 
@@ -363,7 +369,7 @@ without creating a giant list of `FileRecord` objects.
 
 ---
 
-# 8. Build generator pipelines
+## 8. Build generator pipelines
 
 Create:
 
@@ -414,7 +420,7 @@ This tests whether you genuinely understand **lazy evaluation**.
 
 ---
 
-# 9. Deep and shallow copying
+## 9. Deep and shallow copying
 
 Create a `PipelineState`.
 
@@ -464,7 +470,7 @@ That should become part of your documentation.
 
 ---
 
-# 10. Create a plugin system with `Protocol`
+## 10. Create a plugin system with `Protocol`
 
 This is one of the most important expert-level pieces.
 
@@ -495,7 +501,7 @@ That's **structural typing**.
 
 ---
 
-# 11. Generic cache
+## 11. Generic cache
 
 Build:
 
@@ -552,7 +558,7 @@ Entries:      10,000
 
 ---
 
-# 12. Understand the memory leak distinction
+## 12. Understand the memory leak distinction
 
 Now deliberately create two scenarios.
 
@@ -599,7 +605,7 @@ The point is to be able to explain:
 
 ---
 
-# 13. Weak references
+## 13. Weak references
 
 Use:
 
@@ -623,7 +629,7 @@ This is excellent interview material.
 
 ---
 
-# 14. Async architecture
+## 14. Async architecture
 
 Now introduce `asyncio`.
 
@@ -651,7 +657,7 @@ async def process_files(files):
 
 ---
 
-# 15. `asyncio.gather()`
+## 15. `asyncio.gather()`
 
 Create independent asynchronous operations.
 
@@ -672,11 +678,12 @@ results = await asyncio.gather(
 )
 ```
 
-Demonstrate that the results are returned in the order of the supplied awaitables.
+Demonstrate that the results are returned in the order of the supplied
+awaitables.
 
 ---
 
-# 16. `asyncio.create_task()`
+## 16. `asyncio.create_task()`
 
 Create background jobs:
 
@@ -702,7 +709,7 @@ create_task(coroutine)
 
 ---
 
-# 17. Async backpressure
+## 17. Async backpressure
 
 This is where the project becomes much more serious.
 
@@ -750,7 +757,7 @@ This is much more valuable than simply demonstrating `asyncio.gather()`.
 
 ---
 
-# 18. Async locks
+## 18. Async locks
 
 Create shared metrics:
 
@@ -777,11 +784,12 @@ async with metrics_lock:
     metrics.processed += 1
 ```
 
-Then explain why this lock protects coroutines sharing one event loop but does **not** protect multiple processes.
+Then explain why this lock protects coroutines sharing one event loop but does
+**not** protect multiple processes.
 
 ---
 
-# 19. Deliberately introduce the blocking bug
+## 19. Deliberately introduce the blocking bug
 
 Create:
 
@@ -809,7 +817,7 @@ This is one of the most important things to understand for real async Python.
 
 ---
 
-# 20. Async vs threading
+## 20. Async vs threading
 
 Create a processor that uses a deliberately blocking standard-library operation.
 
@@ -832,7 +840,7 @@ and explain why threading can help when a library has no asynchronous interface.
 
 ---
 
-# 21. CPU-bound processing
+## 21. CPU-bound processing
 
 Now introduce a CPU-heavy operation.
 
@@ -886,7 +894,7 @@ for different workloads.
 
 ---
 
-# 22. Demonstrate the GIL
+## 22. Demonstrate the GIL
 
 Build a benchmark:
 
@@ -929,7 +937,7 @@ Compare the concurrency models there.
 
 ---
 
-# 23. Decorator system
+## 23. Decorator system
 
 Create decorators:
 
@@ -951,10 +959,10 @@ async def process_file(...):
 
 Your decorators must work correctly with:
 
-* normal functions
-* async functions
-* `*args`
-* `**kwargs`
+- normal functions
+- async functions
+- `*args`
+- `**kwargs`
 
 And must preserve metadata with:
 
@@ -962,11 +970,12 @@ And must preserve metadata with:
 functools.wraps
 ```
 
-This is a good test of whether you actually understand decorators rather than just their syntax.
+This is a good test of whether you actually understand decorators rather than
+just their syntax.
 
 ---
 
-# 24. Async-aware retry decorator
+## 24. Async-aware retry decorator
 
 Build:
 
@@ -1003,7 +1012,7 @@ Otherwise you've just blocked your event loop.
 
 ---
 
-# 25. Context-managed pipeline
+## 25. Context-managed pipeline
 
 Create:
 
@@ -1037,7 +1046,7 @@ Now you're demonstrating both synchronous and asynchronous resource management.
 
 ---
 
-# 26. Graceful shutdown
+## 26. Graceful shutdown
 
 This is essential.
 
@@ -1069,16 +1078,16 @@ EXIT
 
 This forces you to understand:
 
-* cancellation
-* `asyncio.Task`
-* cleanup
-* context managers
-* exceptions
-* event loop shutdown
+- cancellation
+- `asyncio.Task`
+- cleanup
+- context managers
+- exceptions
+- event loop shutdown
 
 ---
 
-# 27. Snapshot engine
+## 27. Snapshot engine
 
 Combine your previous project.
 
@@ -1132,7 +1141,7 @@ Use sets and hashing heavily here.
 
 ---
 
-# 28. Memory profiler
+## 28. Memory profiler
 
 Add:
 
@@ -1172,7 +1181,7 @@ This makes your memory-model knowledge visible.
 
 ---
 
-# 29. Type the entire system
+## 29. Type the entire system
 
 Use:
 
@@ -1220,7 +1229,7 @@ as long as it satisfies the protocol.
 
 ---
 
-# 30. Add a plugin registry
+## 30. Add a plugin registry
 
 Build:
 
@@ -1244,17 +1253,17 @@ processor = registry.get(".json")
 
 This combines:
 
-* dictionaries
-* classes
-* protocols
-* generics
-* exceptions
-* object identity
-* composition
+- dictionaries
+- classes
+- protocols
+- generics
+- exceptions
+- object identity
+- composition
 
 ---
 
-# 31. Build an event system
+## 31. Build an event system
 
 Create events such as:
 
@@ -1289,7 +1298,7 @@ Now you're building an actual extensible architecture.
 
 ---
 
-# 32. Final system
+## 32. Final system
 
 Your finished project should look like:
 
@@ -1322,11 +1331,12 @@ Your finished project should look like:
               Snapshot      Metrics      Events
 ```
 
-`*` Don't actually add an API. Keep the interface as a CLI. The architecture can be API-ready without building one.
+`*` Don't actually add an API. Keep the interface as a CLI. The architecture can
+be API-ready without building one.
 
 ---
 
-# What this project demonstrates
+## What this project demonstrates
 
 | Python knowledge      | Where PyFlow demonstrates it             |
 | --------------------- | ---------------------------------------- |
@@ -1377,7 +1387,7 @@ Your finished project should look like:
 
 ---
 
-# The part that makes it genuinely expert-level
+## The part that makes it genuinely expert-level
 
 Don't just make the application work.
 
@@ -1447,80 +1457,65 @@ shallow copy
 deep copy
 ```
 
-This turns the project into both an application **and a Python runtime laboratory**.
+This turns the project into both an application **and a Python runtime
+laboratory**.
 
 ---
 
-# The interview questions this project prepares you for
+## The interview questions this project prepares you for
 
-By the end, you should be able to answer these from experience rather than memorization:
+By the end, you should be able to answer these from experience rather than
+memorization:
 
 ### Object model
 
 > What actually happens when you instantiate a Python object?
-
 > When would you override `__new__`?
-
 > Why does overriding `__eq__` affect hashing?
-
 > Why would `__slots__` reduce memory?
 
 ### Memory
 
 > How does CPython manage memory?
-
 > What does reference counting do?
-
 > What happens with reference cycles?
-
 > How is a memory leak different from an unbounded cache?
-
 > When would you use `weakref`?
 
 ### Async
 
 > What exactly happens at `await`?
-
 > Why doesn't `asyncio` give you parallelism?
-
 > Why does `time.sleep()` break an async application?
-
 > When would you use threads?
-
 > When would you use processes?
-
 > What is the GIL?
 
 ### Generators
 
 > Why use a generator instead of a list?
-
 > What does `yield` actually do?
-
 > Why can generators process datasets larger than memory?
 
 ### Architecture
 
 > Why use `Protocol` instead of inheritance?
-
-> How would you replace one processor implementation without changing the pipeline?
-
+> How would you replace one processor implementation without changing the
+> pipeline?
 > Where should shared state live?
-
 > How would you prevent unbounded task creation?
 
 ### Concurrency
 
 > Why use an `asyncio.Queue`?
-
 > What is backpressure?
-
 > What does `asyncio.Lock` protect?
-
 > Does an asyncio lock protect multiple processes?
-
 > What happens if one coroutine performs blocking CPU work?
 
-If you can **build PyFlow, profile it, deliberately break it, fix it, benchmark the alternatives, and explain the results**, you're no longer just demonstrating that you know Python syntax.
+If you can **build PyFlow, profile it, deliberately break it, fix it, benchmark
+the alternatives, and explain the results**, you're no longer just demonstrating
+that you know Python syntax.
 
-You're demonstrating that you understand **Python as a runtime and as a systems programming environment**.
+You're demonstrating that you understand **Python as a runtime and as a systems
+programming environment**.

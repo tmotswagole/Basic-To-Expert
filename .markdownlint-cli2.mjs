@@ -1,0 +1,10 @@
+export default {
+  config: {
+    default: true,
+    MD013: {
+      line_length: 80,
+      tables: false,
+      code_blocks: false,
+    },
+  },
+};
