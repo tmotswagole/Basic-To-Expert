@@ -8,6 +8,156 @@ through an asynchronous pipeline, processes CPU-heavy work in separate
 processes, maintains an in-memory cache, generates snapshots, tracks metrics,
 and exposes a small CLI for controlling the engine.
 
+## Definitions and architecture boundaries
+
+PyFlow is an educational **bounded ingestion system**. It accepts a lazy stream
+of file records, schedules independent work, applies the right processor, and
+publishes results without allowing input volume to dictate memory usage. The
+point is not to claim that every workload should be asynchronous. The point is
+to make each concurrency choice explicit and measurable.
+
+- **Throughput** is the amount of work completed per unit of time.
+- **Latency** is the time from accepting one file to producing its result.
+- **Backpressure** is the mechanism that slows producers when consumers cannot
+    keep up. In PyFlow, the bounded `asyncio.Queue` is the control point.
+- **Concurrency** means multiple operations are in progress; **parallelism**
+    means work is executing at the same time on multiple CPU cores.
+- **I/O-bound work** spends time waiting for files or other external resources.
+- **CPU-bound work** spends time executing instructions and may require
+    processes to obtain parallel execution in CPython.
+- **Idempotency** means retrying an operation does not create duplicate or
+    corrupt results.
+- **Observability** means exposing enough metrics, logs, and events to explain
+    what the engine is doing and why it is slow or failing.
+
+Keep the ownership boundaries clear:
+
+1. The scanner discovers records and never owns the full input collection.
+2. The scheduler controls queue capacity, worker count, cancellation, and
+     shutdown.
+3. Process workers perform picklable CPU functions and return data, not live
+     event-loop objects or open file handles.
+4. The cache owns reuse and eviction policy; it must not silently become an
+     unlimited data store.
+5. The aggregator owns result classification and snapshot output.
+6. Metrics and event handlers observe operations without changing their
+     correctness.
+
+## Non-negotiable concurrency contracts
+
+Document and test these rules as part of the project:
+
+- Do not create one task per discovered file. The queue and fixed worker pool
+    must bound pending work.
+- Every produced queue item must eventually receive `task_done()`, including
+    failure paths, so shutdown cannot wait forever.
+- Cancellation must close or await resources. A cancelled task is not proof that
+    the underlying thread or process operation stopped immediately.
+- `asyncio.Lock` protects coroutines in one event loop. It does not coordinate
+    separate processes; use process-safe primitives or aggregate results in one
+    owner process instead.
+- Never call blocking `time.sleep()`, large synchronous CPU functions, or
+    blocking file operations directly on the event loop when responsiveness
+    matters. Move suitable work to `asyncio.to_thread()` or a process pool.
+- Process-pool functions must be importable and serializable, especially on
+    platforms that use the `spawn` start method. Protect CLI startup with the
+    normal `if __name__ == "__main__":` guard.
+- Retries must target transient failures, use asynchronous delays in async code,
+    and stop after a documented limit. Retrying validation errors wastes work.
+
+## Result and failure model
+
+Represent success and failure as structured results rather than relying only on
+log text. A result should identify the path, processor, status, duration,
+bytes processed, cache state, and an error type or message when applicable.
+Separate these categories:
+
+- **Permanent failure:** invalid input, unsupported format, or permission that
+    will not change during this run.
+- **Transient failure:** a short-lived resource or operating-system problem
+    that may succeed on retry.
+- **Cancellation:** work intentionally stopped during shutdown; it should not
+    be reported as an ordinary processing error.
+
+This distinction makes metrics meaningful and prevents a graceful shutdown from
+looking like a wave of failed files.
+
+## Performance methodology
+
+Every benchmark should state its workload, input size, worker count, process
+count, warm-up policy, and number of repetitions. Compare like with like and
+report more than one number when possible: elapsed time, files per second, peak
+memory, and failure count.
+
+Interpret results carefully:
+
+- Threads may improve I/O-bound work because waiting releases execution time,
+    but they generally do not make pure Python CPU work run in parallel under the
+    GIL.
+- Processes can parallelize CPU work but add startup, serialization, and
+    inter-process communication costs.
+- Asyncio improves coordination of waiting tasks; it does not make blocking
+    code non-blocking by itself.
+- A cache can increase throughput while increasing memory use. Track hit rate,
+    eviction count, entry age, and size together.
+- `sys.getsizeof()` measures only an object's shallow footprint. Use
+    `tracemalloc` or a deliberately documented measurement method for aggregate
+    memory conclusions.
+
+## Expert checkpoints
+
+### Checkpoint A: bounded synchronous core
+
+Build the scanner, records, processors, cache, snapshots, and deterministic
+result aggregation without asyncio. This gives every later benchmark a correct
+baseline.
+
+### Checkpoint B: async scheduler
+
+Add a bounded queue, a fixed number of workers, metrics protected by an async
+lock, and cancellation tests. Demonstrate that a slow consumer causes producer
+backpressure instead of unbounded task creation.
+
+### Checkpoint C: mixed concurrency
+
+Move blocking I/O to threads and CPU-heavy functions to a process pool. Measure
+serialization overhead and ensure the event loop remains responsive while work
+is running elsewhere.
+
+### Checkpoint D: production-shaped lifecycle
+
+Add retries, events, structured failures, snapshots, context-managed sessions,
+and graceful shutdown. Exercise success, permanent failure, transient failure,
+cache hit, cancellation, and process-worker failure.
+
+## Minimum acceptance checklist
+
+PyFlow is ready for the expert challenge when it can:
+
+- ingest a lazy stream without retaining all records;
+- apply processors through a `Protocol`-based registry;
+- use a typed cache with bounded eviction and useful statistics;
+- maintain a bounded async queue and fixed worker pool;
+- distinguish coroutine concurrency from process parallelism;
+- offload blocking I/O and CPU-bound work to appropriate executors;
+- retry only eligible failures and preserve the final cause;
+- shut down without stranded tasks, queue joins, or process workers;
+- generate comparable snapshots and structured run metrics; and
+- support benchmarks that explain trade-offs rather than merely printing faster
+    numbers.
+
+## Testing and observability expectations
+
+Test pure models and cache policy synchronously, then use small deterministic
+fixtures for scheduler tests. Include tests for queue saturation, duplicate
+records, cancellation, retry timing, process-pool result ordering, cache
+eviction, and snapshot consistency. Avoid making tests depend on exact timing;
+assert ordering, counts, state transitions, and bounded behavior instead.
+
+Expose a run identifier so logs, events, metrics, and snapshots can be joined.
+At minimum record discovered, queued, started, completed, cached, retried,
+failed, cancelled, and bytes-processed counts. A system that is fast but cannot
+explain missing work is not complete.
 No:
 
 - FastAPI
@@ -29,6 +179,11 @@ The point is to make the Python runtime itself the thing you're demonstrating.
 ---
 
 ## 1. What you're building
+
+This section defines PyFlow as a complete ingestion system rather than a
+collection of isolated Python demonstrations. The finished engine should make
+file discovery, scheduling, processing, reuse, measurement, and shutdown work
+together under a single CLI-controlled lifecycle.
 
 The finished system looks conceptually like this:
 
@@ -74,6 +229,11 @@ scratch in Python**.
 
 ## 2. The problem
 
+This section explains the scale and pressure the design must handle. Millions
+of files expose the cost of eager lists, unbounded tasks, repeated processing,
+and unclear failure handling, so each later feature answers one of those
+constraints.
+
 Imagine you have:
 
 ```text
@@ -109,6 +269,11 @@ And it needs to remain responsive while doing all of this.
 ---
 
 ## 3. The architecture
+
+This section assigns responsibilities to modules and runtime components. Treat
+the diagram as a dependency guide: data should flow from discovery toward
+results, while control signals such as cancellation, limits, and metrics flow
+back through the engine.
 
 Your eventual project should look roughly like:
 
@@ -179,6 +344,10 @@ Build it progressively.
 
 ## 4. Phase 1 — Build the object model
 
+This phase establishes the immutable identity and observable state of one file
+before concurrency makes debugging harder. The model should be useful in
+collections, logs, snapshots, and tests without owning the whole pipeline.
+
 Create a `FileRecord`.
 
 It represents one discovered file.
@@ -242,6 +411,11 @@ could represent the number of lines.
 
 ## 5. Make `FileRecord` memory efficient
 
+This phase measures object representation instead of assuming that `__slots__`
+is automatically better. Compare realistic collections, because the instance
+size alone may omit referenced values and does not describe total application
+memory.
+
 This is where the expert material begins.
 
 Create a second implementation using:
@@ -298,6 +472,10 @@ Now you have a practical reason to understand `__slots__`.
 
 ## 6. Explore `__new__`
 
+This phase isolates allocation control from ordinary initialization. Use it to
+understand immutable construction and interning, while documenting why identity
+reuse can save work in one case and create surprising shared state in another.
+
 Don't artificially use `__new__` everywhere.
 
 Create a specialized immutable object:
@@ -333,6 +511,10 @@ simply knowing that it exists.
 ---
 
 ## 7. File discovery must be lazy
+
+This phase makes input volume independent from the number of objects retained
+at once. The scanner should yield records as they are found and define explicit
+policies for symlinks, inaccessible paths, ignored directories, and ordering.
 
 Your scanner should **never** build a list of millions of files.
 
@@ -370,6 +552,10 @@ without creating a giant list of `FileRecord` objects.
 ---
 
 ## 8. Build generator pipelines
+
+This phase composes discovery, filtering, deduplication, and batching without
+breaking laziness. Each stage should have one responsibility and a clear memory
+bound so a later stage cannot accidentally force the entire input into a list.
 
 Create:
 
@@ -422,6 +608,10 @@ This tests whether you genuinely understand **lazy evaluation**.
 
 ## 9. Deep and shallow copying
 
+This phase investigates which parts of mutable pipeline state are shared after a
+copy. The result should guide snapshotting, retries, and worker isolation rather
+than treating `deepcopy()` as a universal solution.
+
 Create a `PipelineState`.
 
 It contains nested mutable structures:
@@ -472,6 +662,10 @@ That should become part of your documentation.
 
 ## 10. Create a plugin system with `Protocol`
 
+This phase introduces structural typing as an extension boundary. The pipeline
+depends on the behavior a processor provides, not on a common inheritance tree,
+which lets new formats be added without editing the scheduler.
+
 This is one of the most important expert-level pieces.
 
 Your pipeline shouldn't care how a file is processed.
@@ -502,6 +696,10 @@ That's **structural typing**.
 ---
 
 ## 11. Generic cache
+
+This phase builds reuse into the engine with explicit key, value, capacity, and
+expiration semantics. Cache correctness includes distinguishing a miss from a
+cached falsey value and ensuring eviction cannot return stale or incorrect data.
 
 Build:
 
@@ -560,6 +758,10 @@ Entries:      10,000
 
 ## 12. Understand the memory leak distinction
 
+This phase separates memory retained by application policy from memory retained
+by object references. The experiments should show that an unbounded cache, a
+reference cycle, and a temporary allocation have different causes and remedies.
+
 Now deliberately create two scenarios.
 
 ### Growing cache
@@ -607,6 +809,10 @@ The point is to be able to explain:
 
 ## 13. Weak references
 
+This phase models non-owning registries and lifecycle-sensitive metadata. A weak
+reference can observe an object without keeping it alive, but it must be treated
+as optional because the target may disappear between checks.
+
 Use:
 
 ```python
@@ -630,6 +836,10 @@ This is excellent interview material.
 ---
 
 ## 14. Async architecture
+
+This phase adds cooperative concurrency for operations that spend time waiting.
+The scheduler should define worker count, ownership of the event loop, result
+collection, and how exceptions move from a worker to the controlling command.
 
 Now introduce `asyncio`.
 
@@ -659,6 +869,10 @@ async def process_files(files):
 
 ## 15. `asyncio.gather()`
 
+This phase demonstrates coordinated waiting for a known group of operations.
+Test result ordering, exception behavior, and cancellation so you understand
+what `gather()` guarantees beyond simply running functions concurrently.
+
 Create independent asynchronous operations.
 
 For example:
@@ -685,6 +899,10 @@ awaitables.
 
 ## 16. `asyncio.create_task()`
 
+This phase distinguishes scheduling background work from immediately awaiting a
+coroutine. Every created task needs an owner, a completion path, and exception
+handling; otherwise it can outlive the operation that created it.
+
 Create background jobs:
 
 ```python
@@ -710,6 +928,10 @@ create_task(coroutine)
 ---
 
 ## 17. Async backpressure
+
+This phase protects the engine from a fast scanner overwhelming slower workers.
+A bounded queue makes pressure observable and forces the producer to wait,
+which keeps pending work and memory within a deliberate limit.
 
 This is where the project becomes much more serious.
 
@@ -759,6 +981,10 @@ This is much more valuable than simply demonstrating `asyncio.gather()`.
 
 ## 18. Async locks
 
+This phase makes shared in-process metrics consistent when multiple coroutines
+update them. It also clarifies the boundary of an asyncio lock: it coordinates
+tasks in one event loop, not memory shared by separate processes.
+
 Create shared metrics:
 
 ```text
@@ -791,6 +1017,10 @@ Then explain why this lock protects coroutines sharing one event loop but does
 
 ## 19. Deliberately introduce the blocking bug
 
+This phase turns event-loop responsiveness into an experiment rather than an
+assumption. Compare blocking and cooperative waits, then confirm with timestamps
+that one bad coroutine can pause unrelated tasks on the same loop.
+
 Create:
 
 ```python
@@ -819,6 +1049,10 @@ This is one of the most important things to understand for real async Python.
 
 ## 20. Async vs threading
 
+This phase chooses threads for blocking operations that cannot be awaited
+directly. Measure the trade-off in thread creation, shared state, cancellation,
+and whether the underlying library actually releases the GIL while waiting.
+
 Create a processor that uses a deliberately blocking standard-library operation.
 
 Run it using:
@@ -841,6 +1075,10 @@ and explain why threading can help when a library has no asynchronous interface.
 ---
 
 ## 21. CPU-bound processing
+
+This phase moves expensive computation away from the event loop and into worker
+processes. Define a serializable input and result contract, then account for
+process startup and data-transfer costs before claiming an improvement.
 
 Now introduce a CPU-heavy operation.
 
@@ -896,6 +1134,10 @@ for different workloads.
 
 ## 22. Demonstrate the GIL
 
+This phase uses controlled benchmarks to explain why threads and processes can
+behave differently for CPU and I/O workloads. Results are evidence for this
+machine and workload, not a universal performance promise.
+
 Build a benchmark:
 
 ```text
@@ -939,6 +1181,10 @@ Compare the concurrency models there.
 
 ## 23. Decorator system
 
+This phase adds reusable timing, logging, retry, and counting behavior while
+preserving normal and asynchronous call semantics. Test decorator order,
+metadata, arguments, return values, and exception propagation explicitly.
+
 Create decorators:
 
 ```python
@@ -977,6 +1223,10 @@ just their syntax.
 
 ## 24. Async-aware retry decorator
 
+This phase makes retry delays cooperative and failure selection deliberate. The
+decorator should preserve the final exception, avoid retrying permanent errors,
+and stop promptly when cancellation requests the operation to end.
+
 Build:
 
 ```python
@@ -1014,6 +1264,10 @@ Otherwise you've just blocked your event loop.
 
 ## 25. Context-managed pipeline
 
+This phase gives synchronous and asynchronous sessions a formal resource
+boundary. Entering a session prepares dependencies; exiting it must release
+workers, flush state, and preserve the original exception when cleanup succeeds.
+
 Create:
 
 ```python
@@ -1047,6 +1301,10 @@ Now you're demonstrating both synchronous and asynchronous resource management.
 ---
 
 ## 26. Graceful shutdown
+
+This phase defines shutdown as a state transition rather than an abrupt exit.
+The engine must stop accepting work, settle or cancel pending work according to
+policy, close executors, flush observations, and leave a recoverable snapshot.
 
 This is essential.
 
@@ -1088,6 +1346,10 @@ This forces you to understand:
 ---
 
 ## 27. Snapshot engine
+
+This phase connects processing results to durable run history. A snapshot should
+be self-describing, consistently keyed, safe to write, and sufficient to explain
+what changed between two runs without consulting in-memory objects.
 
 Combine your previous project.
 
@@ -1143,6 +1405,10 @@ Use sets and hashing heavily here.
 
 ## 28. Memory profiler
 
+This phase turns memory behavior into measured evidence. Report what each tool
+actually measures, distinguish current from peak allocations, and relate object
+counts to queue size, cache policy, and retained results.
+
 Add:
 
 ```text
@@ -1182,6 +1448,10 @@ This makes your memory-model knowledge visible.
 ---
 
 ## 29. Type the entire system
+
+This phase uses type information to make contracts visible across module and
+process boundaries. Types should clarify valid states and plugin interfaces,
+not merely annotate every variable without improving design or checking.
 
 Use:
 
@@ -1231,6 +1501,10 @@ as long as it satisfies the protocol.
 
 ## 30. Add a plugin registry
 
+This phase makes processor selection data-driven. The registry should normalize
+extensions, define duplicate-registration behavior, report unsupported formats
+clearly, and allow the engine to remain unchanged when a processor is replaced.
+
 Build:
 
 ```python
@@ -1264,6 +1538,10 @@ This combines:
 ---
 
 ## 31. Build an event system
+
+This phase separates facts about pipeline activity from the components that
+observe them. Events should carry enough context for metrics and logs while
+listeners remain unable to alter the processing result accidentally.
 
 Create events such as:
 
@@ -1299,6 +1577,11 @@ Now you're building an actual extensible architecture.
 ---
 
 ## 32. Final system
+
+This phase integrates every earlier contract into one operational workflow. The
+CLI should expose useful commands and status, while the engine remains testable
+without terminal input and continues to behave predictably under load and
+failure.
 
 Your finished project should look like:
 
@@ -1337,6 +1620,10 @@ be API-ready without building one.
 ---
 
 ## What this project demonstrates
+
+Use this table as a verification map, not just a list of vocabulary. Each row
+should correspond to working code, a focused test, or a benchmark whose result
+you can explain in terms of runtime behavior.
 
 | Python knowledge      | Where PyFlow demonstrates it             |
 | --------------------- | ---------------------------------------- |
@@ -1388,6 +1675,10 @@ be API-ready without building one.
 ---
 
 ## The part that makes it genuinely expert-level
+
+This section turns implementation into investigation. Deliberately build small
+experiments, record their conditions and observations, and explain where the
+results may not generalize before applying a conclusion to the main engine.
 
 Don't just make the application work.
 
@@ -1463,6 +1754,10 @@ laboratory**.
 ---
 
 ## The interview questions this project prepares you for
+
+These questions are prompts for reasoning from your own measurements and design
+decisions. A strong answer should identify assumptions, failure modes, and
+trade-offs rather than recite a definition without connecting it to PyFlow.
 
 By the end, you should be able to answer these from experience rather than
 memorization:

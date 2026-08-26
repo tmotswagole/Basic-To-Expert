@@ -77,6 +77,11 @@ And because it's Python-only, you can focus entirely on the language.
 
 ## Stage 1 — Transactions
 
+This stage establishes the smallest useful version of the application: a user
+can create, inspect, and remove financial records. The goal is to make the
+program's data flow visible before adding abstractions, persistence, or
+advanced validation.
+
 Start with a simple list:
 
 ```python
@@ -118,6 +123,11 @@ Don't worry about classes yet.
 
 ## Stage 2 — Lists and dictionaries
 
+This stage explains why a list is useful for preserving a collection of
+transactions and why a dictionary is useful for naming each field. You will
+also define predictable return values and learn how mutation changes shared
+state.
+
 Implement:
 
 ```python
@@ -148,6 +158,11 @@ This is where you should get comfortable with mutation.
 ---
 
 ## Stage 3 — Sets
+
+This stage uses a set for membership and uniqueness rather than storing another
+list of repeated category names. The important result is understanding that a
+set represents the domain of allowed categories, while each transaction stores
+the category it selected.
 
 Categories shouldn't be duplicated.
 
@@ -190,6 +205,10 @@ and understand why sets are useful.
 
 ## Stage 4 — Tuples
 
+This stage contrasts a fixed, immutable sequence with a named, mutable mapping.
+You will decide where immutability communicates a rule, such as a transaction
+type that should not be changed accidentally after validation.
+
 Represent transaction types as an immutable collection:
 
 ```python
@@ -229,6 +248,10 @@ That's part of the learning.
 ---
 
 ## Stage 5 — `is` vs `==`
+
+This stage separates value comparison from object identity using a real
+not-found result. You will learn why `is None` is the correct sentinel check and
+why identity should not be used as a general substitute for equality.
 
 Create functions that return `None` when something isn't found.
 
@@ -273,6 +296,10 @@ a is c
 
 ## Stage 6 — The mutable default argument trap
 
+This stage demonstrates that default argument expressions are evaluated once
+when a function is defined, not once per call. The deliberate bug and its fix
+should leave you able to explain object lifetime and shared mutable state.
+
 Create this deliberately:
 
 ```python
@@ -303,6 +330,11 @@ Understand **why** the original happens.
 ---
 
 ## Stage 7 — Functions with `*args`
+
+This stage makes one filtering function accept a variable number of permitted
+values without changing its signature. It demonstrates that `*args` is a tuple
+of positional values and that the function still needs to validate the field
+and define what no values means.
 
 Add a transaction filtering system.
 
@@ -353,6 +385,11 @@ Remember that `values` becomes a tuple.
 
 ## Stage 8 — `**kwargs`
 
+This stage turns named search criteria into a dictionary so callers can combine
+filters without a long list of optional parameters. Define supported filter
+names, comparison behavior, and whether multiple filters are combined with
+logical AND or OR.
+
 Build a more flexible search function:
 
 ```python
@@ -386,6 +423,11 @@ This is a very practical use of `**kwargs`.
 ---
 
 ## Stage 9 — Classes
+
+This stage moves from loose dictionaries to objects with a defined state and
+behavior. The purpose is not to use classes everywhere, but to make invalid
+transactions harder to create and to give the tracker a clear owner for its
+collection.
 
 Once the procedural version works, rebuild it using classes.
 
@@ -429,6 +471,10 @@ FinanceTracker
 
 ## Stage 10 — Composition
 
+This stage divides the application into cooperating objects that each have one
+responsibility. Composition means the tracker has managers; it does not mean
+the managers need to inherit from one another.
+
 Give `FinanceTracker` several components.
 
 For example:
@@ -468,6 +514,11 @@ Your tracker **has** managers.
 ---
 
 ## Stage 11 — Inheritance
+
+This stage introduces inheritance only where income and expense are specialized
+forms of a shared transaction concept. The learning target is polymorphism:
+the tracker can ask either object for its financial effect without inspecting
+its concrete class.
 
 Don't force inheritance into the whole project.
 
@@ -523,6 +574,11 @@ because you need to demonstrate it.
 
 ## Stage 12 — Exceptions
 
+This stage gives invalid domain states names that the rest of the application
+can handle deliberately. Custom exceptions communicate whether the problem is
+with an amount, category, budget, or requested transaction rather than forcing
+the CLI to interpret generic error text.
+
 Create custom exceptions:
 
 ```python
@@ -561,6 +617,10 @@ if amount <= 0:
 
 ## Stage 13 — `try / except / else / finally`
 
+This stage places error handling at the user-input boundary while keeping the
+domain methods reusable. `except` handles known failures, `else` runs only
+after success, and `finally` performs work that must happen on every path.
+
 Your CLI should handle errors properly.
 
 Something like:
@@ -596,6 +656,11 @@ This directly practices the exception structure from your study notes.
 
 ## Stage 14 — Budget system
 
+This stage introduces a second financial rule: expenses can be evaluated
+against a category limit. It connects stored transactions to derived values
+such as spent, remaining, and exceeded, so the budget report must always be
+calculated from one consistent source of truth.
+
 Add budgets:
 
 ```text
@@ -628,6 +693,10 @@ This gives you more opportunities to practice exceptions.
 ---
 
 ## Stage 15 — Reports
+
+This stage turns raw records into information a person can act on. Grouping
+amounts by type and category gives practice with dictionary accumulation,
+sorting, formatting, and checking that totals reconcile with the balance.
 
 Add:
 
@@ -677,6 +746,10 @@ Use dictionaries to calculate totals:
 
 ## Final project structure
 
+Use this structure only after the behavior is understood in one or two files.
+Each module should have a reason to exist, a small public interface, and tests
+that do not need to run the interactive menu.
+
 Only once the project becomes large should you split it up:
 
 ```text
@@ -698,6 +771,112 @@ finance_tracker/
 │
 └── utils.py
 ```
+
+## What the project is teaching
+
+This is a deliberately small **in-memory CLI**. A CLI, or command-line
+interface, is a program that receives input and displays output in a terminal
+instead of a browser. "In-memory" means that the first version stores data in
+Python objects while the program is running; closing the program may discard
+the data. That limitation keeps attention on Python fundamentals rather than
+file formats or databases.
+
+The important design question is not only whether an operation works, but also
+which object should own it:
+
+- A transaction owns transaction data and transaction-specific behavior.
+- A manager owns a collection and operations such as add, find, and delete.
+- A report generator reads data and calculates totals without changing it.
+- The CLI translates user input into function or method calls and formats the
+  result for a person to read.
+
+Keeping those responsibilities separate makes the later class-based version a
+refactoring of the procedural version, not a completely different project.
+
+## Domain rules
+
+Write these rules down before implementing the menu. They are the contract that
+your functions must enforce:
+
+1. Every transaction has a unique positive integer ID.
+2. Amounts are positive numbers. The transaction type determines whether the
+    amount increases income or increases expenses.
+3. The type must be `income` or `expense`.
+4. Categories are normalized consistently, for example by trimming whitespace
+    and converting it to lowercase.
+5. Deleting or looking up a missing ID raises a meaningful error or returns
+    `None`, depending on the function's documented contract.
+6. A budget belongs to one category and cannot be negative.
+7. A summary must satisfy `balance = total income - total expenses`.
+
+Decide whether money is represented as `float` or `Decimal`. `float` is easier
+for the first exercise, but `Decimal` is safer for real currency because many
+decimal fractions cannot be represented exactly in binary floating point. The
+choice and its trade-off should be documented in your implementation.
+
+## Suggested implementation checkpoints
+
+Do not move forward only because the menu displays. At each checkpoint, be
+able to explain the data structure and prove the behavior with a small test or
+manual example.
+
+### Checkpoint A: procedural core
+
+Implement adding, listing, finding, and deleting transactions with a list of
+dictionaries. Test an empty list, a single transaction, duplicate-looking
+transactions with different IDs, and deletion of a missing ID.
+
+### Checkpoint B: validation and queries
+
+Add set-based category validation, tuple-based type validation, `*args`
+category filtering, and `**kwargs` search. Test boundary values such as zero,
+negative amounts, unknown fields, no filters, and several matching categories.
+
+### Checkpoint C: object-oriented model
+
+Convert one concept at a time to classes. A `Transaction` should validate its
+own state; a `FinanceTracker` should coordinate collections; and reports should
+be derived from stored transactions rather than duplicated state.
+
+### Checkpoint D: budgets and reports
+
+Set and retrieve budgets, calculate spending by category, and display the
+remaining amount. Test a budget with no spending, spending exactly equal to the
+budget, and spending above the budget. Make the over-budget policy explicit:
+reject the transaction, allow it with a warning, or raise an exception that
+the CLI catches.
+
+### Checkpoint E: errors and user interaction
+
+The CLI should never crash because a user typed text where a number was
+expected. Convert input at the boundary, catch only errors that can be handled,
+and keep the domain layer independent from `input()` and `print()`.
+
+## Minimum acceptance checklist
+
+The finished beginner version should be able to:
+
+- add income and expense transactions;
+- list transactions in a stable, readable order;
+- find, search, and delete by ID;
+- reject invalid amounts, types, and categories;
+- create custom categories without duplicates;
+- set and display category budgets;
+- calculate income, expenses, balance, and category totals;
+- return to the menu after handled errors; and
+- explain why each list, dictionary, set, tuple, class, and exception exists.
+
+## Useful experiments
+
+Keep small experiments beside the project in ordinary Python files. Compare
+`a == b` with `a is b`, call the mutable-default example twice, and inspect the
+type of `values` inside a `*args` function and `filters` inside a `**kwargs`
+function. Each experiment should record an observation and a conclusion, not
+just print a result.
+
+Once the core behavior works, add tests for the tracker and managers. The most
+valuable tests are small: one rule, one input, one expected result. That makes
+it obvious whether a failure comes from validation, calculation, or formatting.
 
 Still **100% Python**.
 

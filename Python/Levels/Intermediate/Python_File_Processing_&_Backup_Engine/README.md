@@ -111,6 +111,10 @@ This is a small but realistic systems-style Python project.
 
 ## 1. Object model
 
+This section defines the data object that carries file metadata through the
+engine. The methods are not decoration: they determine how records display,
+compare, behave in conditions, and participate in sets or dictionaries.
+
 Create a `FileInfo` object.
 
 ```text
@@ -151,6 +155,10 @@ This gives you direct practice with:
 
 ## 2. `__repr__`
 
+This section focuses on developer-facing diagnostics. A useful representation
+should reveal enough stable state to debug a scan or failing test without
+pretending that it is the same output intended for an end user.
+
 Make `repr()` useful to developers.
 
 Something like:
@@ -180,6 +188,10 @@ and make them intentionally different.
 ---
 
 ## 3. `__str__`
+
+This section separates human-readable presentation from debugging output. The
+display should be concise and useful in the CLI, while `repr()` remains more
+explicit for logs, collections, and interactive debugging.
 
 Make `str()` user-friendly.
 
@@ -219,6 +231,11 @@ That's the exact distinction your notes describe.
 
 ## 4. `__len__`
 
+This section gives the object a meaningful size-related behavior and shows how
+Python uses `__len__` for both `len(value)` and, when no `__bool__` exists,
+truth testing. Choose a definition that is cheap enough or document its I/O
+cost.
+
 Give `FileInfo` a meaningful length.
 
 For example:
@@ -241,6 +258,10 @@ can demonstrate how `__len__` can influence truthiness.
 ---
 
 ## 5. `__eq__`
+
+This section defines value equality independently from object identity. Decide
+which fields make two file records represent the same logical file and test
+that unrelated metadata changes do or do not affect that decision.
 
 Two `FileInfo` objects representing the same file should compare correctly.
 
@@ -277,6 +298,10 @@ This gives you a practical way to reinforce **identity vs equality**.
 
 ## 6. `__hash__`
 
+This section explores the contract that equal objects must have equal hashes.
+It also exposes why mutable fields should not participate in a hash used by a
+set or dictionary key: changing them can make an existing entry unreachable.
+
 Make `FileInfo` usable inside a set:
 
 ```python
@@ -306,6 +331,10 @@ That's part of the exercise.
 ---
 
 ## 7. Shallow vs deep copy
+
+This section makes reference sharing visible inside a snapshot. A shallow copy
+duplicates the outer container but reuses nested objects; a deep copy recursively
+duplicates them, which is safer for independent experimentation but more costly.
 
 Create a `DirectorySnapshot`.
 
@@ -367,6 +396,10 @@ Your goal is to understand **exactly what is being copied**.
 
 ## 8. Build a snapshot system
 
+This section turns a momentary scan into durable, comparable state. JSON is
+intentionally simple and inspectable, so you can focus on serialization rules,
+stable paths, timestamps, checksums, and handling incomplete or invalid files.
+
 Your application should be able to capture:
 
 ```text
@@ -405,6 +438,10 @@ snapshots/
 ---
 
 ## 9. Decorators
+
+This section adds cross-cutting behavior around operations without putting
+timing and logging code inside every function. The decorator must preserve the
+wrapped function's calling convention, metadata, return value, and exceptions.
 
 Now add an operation logger.
 
@@ -447,6 +484,10 @@ This directly mirrors the material you're studying.
 
 ## 10. Create several decorators
 
+This section demonstrates how independent decorators compose around one
+operation. Their order matters, so record which wrapper validates, logs, times,
+and records history, and verify behavior when the wrapped operation fails.
+
 Don't stop at `@timed`.
 
 Create:
@@ -488,6 +529,10 @@ Now you have a reason to understand **decorator stacking**.
 
 ## 11. Test `functools.wraps`
 
+This section explains why wrapper metadata affects debugging, documentation,
+introspection, and tooling. The experiment should compare decorated functions
+with and without `wraps`, rather than treating it as a line to copy blindly.
+
 Create a decorated function:
 
 ```python
@@ -522,6 +567,10 @@ This makes the reason for `functools.wraps` obvious.
 
 ## 12. Generators
 
+This section introduces lazy iteration as a memory boundary. A generator does
+not hold the complete file in memory; it pauses at `yield` and resumes only
+when the consumer requests the next item.
+
 This is where the project gets interesting.
 
 You need to process **large files without loading them entirely into memory**.
@@ -552,6 +601,10 @@ for line in stream_lines("large_file.txt"):
 ---
 
 ## 13. Build a large-file analyzer
+
+This section applies streaming to a real measurement task. Keep only running
+counters and the small amount of state needed for longest-line and average-line
+calculations, so memory use depends on the measurement rather than file size.
 
 Your program should support:
 
@@ -609,6 +662,10 @@ load everything into RAM
 
 ## 14. Generator pipelines
 
+This section composes small lazy transformations into a reusable processing
+pipeline. Each stage should accept an iterable and yield transformed values,
+allowing filtering and normalization to happen only as results are consumed.
+
 Take it further.
 
 Create:
@@ -654,6 +711,10 @@ Nothing should happen until iteration begins.
 
 ## 15. Generator challenge
 
+This section moves streaming from text lines to raw bytes. Fixed-size chunks
+make checksum calculation predictable and demonstrate why binary processing
+must avoid accidental decoding or whole-file reads.
+
 Create a function:
 
 ```python
@@ -686,6 +747,10 @@ This is a very practical use of generators.
 ---
 
 ## 16. Context managers
+
+This section gives resource lifetime a clear boundary. A context manager makes
+opening, preparation, cleanup, and exception behavior visible at the call site
+and protects files from being left open after failure.
 
 Now build a custom context manager.
 
@@ -722,6 +787,10 @@ __exit__
 ---
 
 ## 17. Build a backup context manager
+
+This section models backup as a controlled operation rather than a bare copy.
+The implementation must define when work is committed, how copied data is
+verified, and what partial artifacts are removed after an error.
 
 Create:
 
@@ -767,6 +836,10 @@ __exit__()
 
 ## 18. Context manager with `contextlib`
 
+This section implements the same lifecycle with a generator-based helper. The
+comparison should explain when the class form is clearer, when `contextmanager`
+reduces ceremony, and how exceptions cross the `yield` boundary.
+
 After you've implemented the class version, implement the same thing using:
 
 ```python
@@ -796,6 +869,11 @@ You should understand both.
 ---
 
 ## 19. Snapshot comparison
+
+This section combines the earlier model, set, hashing, and generator work into
+a useful change report. Comparison should be deterministic, should not confuse
+renames with content changes unless explicitly supported, and should preserve
+enough detail for a user to act on the result.
 
 Now make the project actually useful.
 
@@ -849,6 +927,10 @@ This requires:
 
 ## 20. Final architecture
 
+This section is a responsibility map, not a requirement to create every file
+immediately. Introduce modules when they reduce coupling and make testing or
+replacement easier, while keeping the CLI as a thin orchestration layer.
+
 Once you're finished, your Python project could look like:
 
 ```text
@@ -892,6 +974,10 @@ Still **nothing but Python**.
 
 ## What each topic maps to
 
+Use this table as a revision map after implementation. For every row, point to
+one function, class, or test that demonstrates the topic and be able to explain
+why that feature belongs at that location.
+
 | Your topic        | Project feature                                         |
 | ----------------- | ------------------------------------------------------- |
 | `__new__`         | Experiment with immutable/singleton `FileInfo` variants |
@@ -915,6 +1001,11 @@ Still **nothing but Python**.
 
 ## One important exception: `__new__`
 
+This section is intentionally isolated from the main workflow because custom
+allocation is easy to misuse. The experiments should clarify the difference
+between creating an object and initializing it, especially for immutable values
+and controlled instance reuse.
+
 Don't force `__new__` into the main application.
 
 Create a **separate experimental exercise** inside the project:
@@ -937,6 +1028,11 @@ just to say you've used it.
 ---
 
 ## Your final challenge
+
+This section describes the integration milestone: the separate exercises must
+work together as a reliable command-line tool. Treat the sample session as an
+acceptance scenario and verify both successful output and sensible behavior for
+invalid paths, unreadable files, and interrupted work.
 
 When you've completed everything, your program should be able to handle
 something like:
@@ -1001,3 +1097,105 @@ This project is a much better fit for the intermediate material than another
 CRUD-style application because every feature gives you a concrete reason to
 learn Python's object model, decorators, generators, copying semantics, and
 context managers.
+
+## Definitions and design intent
+
+This project is a **file-processing engine**, not a file browser. Its job is to
+turn file-system state into measured, repeatable results. The standard library
+provides the required building blocks: `pathlib` for paths, `Path.stat()` for
+metadata, `hashlib` for checksums, `json` for snapshots, `shutil` for copying,
+and `contextlib` for managed cleanup.
+
+- A **file record** is the in-memory description of one file at a point in
+    time.
+- A **snapshot** is a serialized record of many files that can be compared
+    later.
+- A **checksum** is a digest of file contents. It helps detect changes that
+    size and modification time alone can miss.
+- A **generator** produces values on demand, which limits memory use and makes
+    pipelines composable.
+- A **context manager** owns setup and cleanup around a block, including cleanup
+    when the block raises an exception.
+- A **backup transaction** is an operation with a clear success state and a
+    cleanup or rollback path when verification fails.
+
+The core separation should be:
+
+1. Scanning discovers paths and metadata.
+2. Analysis reads file contents and calculates measurements.
+3. Snapshot storage serializes data and restores it later.
+4. Comparison classifies paths as new, modified, deleted, or unchanged.
+5. The CLI coordinates operations and formats messages; it should not contain
+     checksum or comparison algorithms.
+
+## Correctness contracts
+
+Use these as implementation rules and test cases:
+
+- Never follow symlinked directories unless the user explicitly requests it.
+- Ignore the snapshot output directory while scanning the source directory, or
+    the tool will repeatedly analyze its own output.
+- Store paths in a consistent form, preferably relative to the scanned root,
+    so the same directory can be compared across machines.
+- Open text files with an explicit encoding and an error policy. A binary file
+    must not be decoded accidentally just because its extension is unknown.
+- A checksum must be calculated from bytes, not from platform-dependent text
+    decoding.
+- A backup is complete only after the destination file exists and its content
+    verifies against the source checksum.
+- Writing a snapshot should not leave a misleading file after a failed write. A
+    temporary file followed by a rename is a good standard-library approach.
+
+## Recommended checkpoints
+
+### Checkpoint A: inspect and stream
+
+Scan a small fixture directory, build `FileInfo` objects, stream lines, and
+produce analysis totals. Include an empty file, a Unicode text file, a binary
+file, and a missing path in the fixture set.
+
+### Checkpoint B: persist and compare
+
+Write and load JSON snapshots. Change one file, add one file, and delete one
+file, then verify all four comparison categories. Keep comparison output
+deterministic by sorting paths before displaying them.
+
+### Checkpoint C: decorators and lifecycle
+
+Add timing, logging, validation, and operation-history decorators. Verify with
+`functools.wraps` that decorated functions retain their name and docstring.
+Then implement the class-based backup context manager and test both success and
+failure cleanup.
+
+### Checkpoint D: safe backup
+
+Back up a directory into a separate destination, verify checksums, and decide
+how existing destination files are handled. Test a destination inside the
+source, a read failure, a name collision, and a partially completed copy.
+
+## Minimum acceptance checklist
+
+The intermediate version is ready when it can:
+
+- scan recursively without eagerly materializing every path;
+- analyze large text files one line at a time;
+- calculate a streaming checksum in fixed-size chunks;
+- create, load, and compare JSON snapshots;
+- classify new, modified, deleted, and unchanged files correctly;
+- preserve function metadata through stacked decorators;
+- copy and verify files with a clear cleanup policy;
+- record successful and failed operations; and
+- explain why a shallow copy, text-mode checksum, or unbounded list would be
+    incorrect for a particular situation.
+
+## Testing strategy
+
+Use temporary directories created with `tempfile.TemporaryDirectory()` so tests
+never modify the user's real files. Keep unit tests for analysis and comparison
+separate from integration tests for scanning and backup. Assert both returned
+values and side effects: destination files, snapshot contents, history entries,
+and cleanup after an exception.
+
+Performance observations should include the machine, file sizes, encoding, and
+whether the operation was warm or cold. A generator is not automatically faster
+than a list; its primary benefit here is bounded memory use and lazy work.
